@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+body {
+  background-color: #f3f1ea;
+  color: #1a1a18;
+}
+
+.panel {
+  background: #ffffff;
+  border: 1px solid #dcd7c9;
+}
+
+.data-label {
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+}
+
+table.log-table th {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  color: #5b6b75;
+  text-align: left;
+  font-weight: 500;
+  border-bottom: 1px solid #dcd7c9;
+  padding: 0.5rem 0.75rem;
+}
+
+table.log-table td {
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid #ece8db;
+  font-size: 0.875rem;
+}
+
+table.log-table tr:hover td {
+  background: #faf9f4;
+}
