@@ -31,9 +31,9 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
           <p className="data-label text-brass-400 text-xs uppercase tracking-widest mb-2">
-            Fleet Operations
+            RSL
           </p>
-          <h1 className="text-2xl font-semibold text-paper">Sign in</h1>
+          <h1 className="text-2xl font-semibold text-paper">Shipboard Division Management</h1>
         </div>
         <form onSubmit={handleSubmit} className="panel rounded-sm p-6 space-y-4">
           <div>
