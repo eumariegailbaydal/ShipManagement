@@ -30,9 +30,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <aside className="w-56 shrink-0 bg-harbor-950 text-paper flex flex-col">
         <div className="px-5 py-6 border-b border-white/10">
           <p className="data-label text-brass-400 text-[0.65rem] uppercase tracking-widest">
-            Fleet Ops
+            RSL
           </p>
-          <p className="text-sm font-medium mt-0.5">Ship Management</p>
+          <p className="text-sm font-medium mt-0.5 leading-snug">Shipboard Division Management</p>
         </div>
         <nav className="flex-1 py-4">
           {NAV.map((item) => {
