@@ -8,13 +8,13 @@
 }
 
 body {
-  background-color: #f3f1ea;
+  background-color: #fafaf8;
   color: #1a1a18;
 }
 
 .panel {
   background: #ffffff;
-  border: 1px solid #dcd7c9;
+  border: 1px solid #e2e2de;
 }
 
 .data-label {
@@ -29,16 +29,16 @@ table.log-table th {
   color: #5b6b75;
   text-align: left;
   font-weight: 500;
-  border-bottom: 1px solid #dcd7c9;
+  border-bottom: 1px solid #e2e2de;
   padding: 0.5rem 0.75rem;
 }
 
 table.log-table td {
   padding: 0.6rem 0.75rem;
-  border-bottom: 1px solid #ece8db;
+  border-bottom: 1px solid #eeeeeb;
   font-size: 0.875rem;
 }
 
 table.log-table tr:hover td {
-  background: #faf9f4;
+  background: #fdfaf6;
 }
