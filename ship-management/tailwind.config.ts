@@ -6,23 +6,23 @@ const config: Config = {
     extend: {
       colors: {
         harbor: {
-          950: "#4A0E12",
-          900: "#6E141B",
-          800: "#8B1B22",
-          700: "#A3232A",
-          600: "#BC2B31",
+          950: "#050D1A",
+          900: "#0B1F3A",
+          800: "#14294B",
+          700: "#1D3A63",
+          600: "#2E6DA4",
         },
         brass: {
-          500: "#1F7A45",
-          400: "#2F9457",
-          300: "#6BBF8B",
+          500: "#C9980A",
+          400: "#F5C400",
+          300: "#FFE066",
         },
         paper: "#FAFAF8",
         ink: "#1A1A18",
         signal: {
           ok: "#1F7A45",
-          warn: "#C97A2B",
-          bad: "#A6242C",
+          warn: "#C9980A",
+          bad: "#B3272C",
         },
       },
       fontFamily: {
