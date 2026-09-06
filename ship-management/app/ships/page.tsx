@@ -44,7 +44,7 @@ export default function ShipsPage() {
 
   async function addShip(e: React.FormEvent) {
     e.preventDefault();
-    await supabase.from("ships").insert({
+    const { error } = await supabase.from("ships").insert({
       name: form.name,
       imo_number: form.imo_number || null,
       type: form.type || null,
@@ -53,6 +53,10 @@ export default function ShipsPage() {
       year_built: form.year_built ? Number(form.year_built) : null,
       status: form.status,
     });
+    if (error) {
+      alert(`Couldn't save this ship: ${error.message}`);
+      return;
+    }
     setForm({ name: "", imo_number: "", type: "", flag: "", capacity: "", year_built: "", status: "in_port" });
     setShowForm(false);
     load();
