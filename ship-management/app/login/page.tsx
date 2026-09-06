@@ -30,6 +30,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-harbor-950 px-4">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
+          <img src="/logo.svg" alt="RSL logo" className="w-20 h-20 mx-auto mb-4" />
           <p className="data-label text-brass-400 text-xs uppercase tracking-widest mb-2">
             RSL
           </p>
