@@ -28,11 +28,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen flex bg-paper">
       <aside className="w-56 shrink-0 bg-harbor-950 text-paper flex flex-col">
-        <div className="px-5 py-6 border-b border-white/10">
-          <p className="data-label text-brass-400 text-[0.65rem] uppercase tracking-widest">
-            RSL
-          </p>
-          <p className="text-sm font-medium mt-0.5 leading-snug">Shipboard Division Management</p>
+        <div className="px-5 py-6 border-b border-white/10 flex items-center gap-3">
+          <img src="/logo.svg" alt="RSL logo" className="w-10 h-10 shrink-0" />
+          <div>
+            <p className="data-label text-brass-400 text-[0.65rem] uppercase tracking-widest">
+              RSL
+            </p>
+            <p className="text-sm font-medium mt-0.5 leading-snug">Shipboard Division Management</p>
+          </div>
         </div>
         <nav className="flex-1 py-4">
           {NAV.map((item) => {
