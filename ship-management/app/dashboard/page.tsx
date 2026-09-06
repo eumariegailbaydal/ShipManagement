@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase-server";
 import AppShell from "@/components/AppShell";
 import StatusBadge from "@/components/StatusBadge";
+import Announcements from "@/components/Announcements";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -48,7 +49,7 @@ export default async function DashboardPage() {
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-6">
+        <div className="grid grid-cols-2 gap-6 mb-6">
           <div className="panel rounded-sm">
             <div className="px-5 py-3 border-b border-ink/10 flex items-center justify-between">
               <h2 className="text-sm font-medium">Certifications needing attention</h2>
@@ -104,6 +105,8 @@ export default async function DashboardPage() {
             </div>
           </div>
         </div>
+
+        <Announcements />
       </div>
     </AppShell>
   );
