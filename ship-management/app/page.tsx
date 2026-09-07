@@ -79,7 +79,7 @@ export default function WorkOrdersPage() {
     load();
   }
 
-  async function notify(order: WorkOrder, channel: "email" | "sms" | "both") {
+    async function notify(order: WorkOrder, channel: "email" | "sms" | "both") {
     if (!order.contact_id) {
       alert("Assign a contact to this work order first.");
       return;
@@ -89,13 +89,24 @@ export default function WorkOrdersPage() {
       body: { work_order_id: order.id, contact_id: order.contact_id, channel },
     });
     setNotifying(null);
-    if (error || data?.success === false) {
-      alert(`Couldn't send: ${data?.error || error?.message || "Unknown error"}`);
+
+    if (error) {
+      let detail = error.message;
+      try {
+        const body = await error.context.json();
+        if (body?.error) detail = body.error;
+      } catch {
+        // context wasn't JSON; fall back to the generic message
+      }
+      alert(`Couldn't send: ${detail}`);
+      return;
+    }
+    if (data?.success === false) {
+      alert(`Couldn't send: ${data.error}`);
       return;
     }
     alert("Sent successfully.");
   }
-
   return (
     <AppShell>
       <div className="p-8 max-w-6xl">
