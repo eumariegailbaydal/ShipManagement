@@ -1,0 +1,17 @@
+{
+  "name": "RSL Shipboard Division Management",
+  "short_name": "RSL Shipboard",
+  "description": "Crew, certifications, ship operations, and maintenance in one place.",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#FAFAF8",
+  "theme_color": "#0B1F3A",
+  "icons": [
+    {
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
