@@ -4,6 +4,13 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "RSL Shipboard Division Management",
   description: "Crew, certifications, ship operations, and maintenance in one place.",
+  manifest: "/manifest.json",
+  themeColor: "#0B1F3A",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "RSL Shipboard",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
