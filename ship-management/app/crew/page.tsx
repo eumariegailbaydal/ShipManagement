@@ -156,13 +156,23 @@ export default function CrewPage() {
   async function addCert(crewId: string, e: React.FormEvent) {
     e.preventDefault();
     setSavingCert(true);
-
-    let certTypeId = certForm.certificate_type_id;
+    
+        let certTypeId = certForm.certificate_type_id;
     if (!certTypeId && certForm.new_type_name) {
-      const { data: newType } = await supabase.from("certificate_types").insert({ name: certForm.new_type_name }).select().single();
+      const { data: newType, error: typeError } = await supabase
+        .from("certificate_types")
+        .insert({ name: certForm.new_type_name })
+        .select()
+        .single();
+      if (typeError) {
+        alert(`Couldn't create the certificate type: ${typeError.message}`);
+        setSavingCert(false);
+        return;
+      }
       certTypeId = newType?.id;
     }
     if (!certTypeId) {
+      alert("Please select an existing certificate type or type a name for a new one.");
       setSavingCert(false);
       return;
     }
