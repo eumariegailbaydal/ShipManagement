@@ -9,6 +9,7 @@ type Announcement = {
   body: string;
   created_by: string | null;
   created_at: string;
+  photo_url: string | null;
 };
 
 export default function Announcements() {
@@ -17,6 +18,8 @@ export default function Announcements() {
   const [canPost, setCanPost] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ title: "", body: "" });
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [posting, setPosting] = useState(false);
   const [loading, setLoading] = useState(true);
 
   async function load() {
@@ -46,6 +49,7 @@ export default function Announcements() {
 
   async function postAnnouncement(e: React.FormEvent) {
     e.preventDefault();
+    setPosting(true);
 
     const {
       data: { user },
@@ -56,16 +60,32 @@ export default function Announcements() {
       authorName = profile?.full_name || authorName;
     }
 
+    let photoUrl: string | null = null;
+    if (photoFile) {
+      const path = `${Date.now()}_${photoFile.name}`;
+      const { error: uploadError } = await supabase.storage.from("announcements").upload(path, photoFile);
+      if (uploadError) {
+        alert(`Couldn't upload the photo: ${uploadError.message}`);
+        setPosting(false);
+        return;
+      }
+      const { data: publicUrl } = supabase.storage.from("announcements").getPublicUrl(path);
+      photoUrl = publicUrl.publicUrl;
+    }
+
     const { error } = await supabase.from("announcements").insert({
       title: form.title,
       body: form.body,
       created_by: authorName,
+      photo_url: photoUrl,
     });
+    setPosting(false);
     if (error) {
       alert(`Couldn't post this announcement: ${error.message}`);
       return;
     }
     setForm({ title: "", body: "" });
+    setPhotoFile(null);
     setShowForm(false);
     load();
   }
@@ -104,8 +124,23 @@ export default function Announcements() {
             onChange={(e) => setForm({ ...form, body: e.target.value })}
             className="w-full border border-ink/20 rounded-sm px-3 py-1.5 text-sm"
           />
-          <button className="bg-harbor-900 text-paper text-sm px-4 py-1.5 rounded-sm hover:bg-harbor-800">
-            Post
+          <div className="flex items-center gap-3">
+            <label className="text-xs text-ink/60">
+              Attach photo (optional):{" "}
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setPhotoFile(e.target.files?.[0] ?? null)}
+                className="text-xs"
+              />
+            </label>
+          </div>
+          {photoFile && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={URL.createObjectURL(photoFile)} alt="" className="max-h-40 rounded-sm border border-ink/10" />
+          )}
+          <button disabled={posting} className="bg-harbor-900 text-paper text-sm px-4 py-1.5 rounded-sm hover:bg-harbor-800 disabled:opacity-60">
+            {posting ? "Posting…" : "Post"}
           </button>
         </form>
       )}
@@ -128,6 +163,10 @@ export default function Announcements() {
               )}
             </div>
             <p className="text-sm text-ink/70 mt-1 whitespace-pre-wrap">{a.body}</p>
+            {a.photo_url && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={a.photo_url} alt="" className="mt-2 max-h-64 rounded-sm border border-ink/10" />
+            )}
             <p className="text-xs text-ink/40 mt-1.5">
               {a.created_by ?? "Fleet management"} · {new Date(a.created_at).toLocaleDateString()}
             </p>
