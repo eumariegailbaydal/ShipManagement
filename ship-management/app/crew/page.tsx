@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase-browser";
 import AppShell from "@/components/AppShell";
-import StatusBadge from "@/components/StatusBadge";
 
 type Crew = {
   id: string;
@@ -13,12 +13,15 @@ type Crew = {
   phone: string | null;
   email: string | null;
   status: string;
+  photo_url: string | null;
 };
 
 export default function CrewPage() {
   const supabase = createClient();
   const [crew, setCrew] = useState<Crew[]>([]);
   const [showForm, setShowForm] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [form, setForm] = useState({
     full_name: "",
     rank: "",
@@ -41,7 +44,22 @@ export default function CrewPage() {
 
   async function addCrew(e: React.FormEvent) {
     e.preventDefault();
-    await supabase.from("crew").insert({
+    setUploading(true);
+
+    let photoUrl: string | null = null;
+    if (photoFile) {
+      const path = `${Date.now()}_${photoFile.name}`;
+      const { error: uploadError } = await supabase.storage.from("avatars").upload(path, photoFile);
+      if (uploadError) {
+        alert(`Couldn't upload photo: ${uploadError.message}`);
+        setUploading(false);
+        return;
+      }
+      const { data: publicUrl } = supabase.storage.from("avatars").getPublicUrl(path);
+      photoUrl = publicUrl.publicUrl;
+    }
+
+    const { error } = await supabase.from("crew").insert({
       full_name: form.full_name,
       rank: form.rank || null,
       nationality: form.nationality || null,
@@ -50,7 +68,13 @@ export default function CrewPage() {
       phone: form.phone || null,
       email: form.email || null,
       status: form.status,
+      photo_url: photoUrl,
     });
+    setUploading(false);
+    if (error) {
+      alert(`Couldn't save this crew member: ${error.message}`);
+      return;
+    }
     setForm({
       full_name: "",
       rank: "",
@@ -61,6 +85,7 @@ export default function CrewPage() {
       email: "",
       status: "standby",
     });
+    setPhotoFile(null);
     setShowForm(false);
     load();
   }
@@ -76,7 +101,7 @@ export default function CrewPage() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-xl font-semibold mb-1">Crew</h1>
-            <p className="text-sm text-ink/60">Roster and current status.</p>
+            <p className="text-sm text-ink/60">Roster and current status. Click a name for their full profile.</p>
           </div>
           <button
             onClick={() => setShowForm(!showForm)}
@@ -88,6 +113,20 @@ export default function CrewPage() {
 
         {showForm && (
           <form onSubmit={addCrew} className="panel rounded-sm p-5 mb-6 grid grid-cols-3 gap-4">
+            <div className="col-span-3 flex items-center gap-4">
+              <div className="w-16 h-16 rounded-full bg-ink/5 border border-ink/15 overflow-hidden flex items-center justify-center shrink-0">
+                {photoFile ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={URL.createObjectURL(photoFile)} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-xs text-ink/40">No photo</span>
+                )}
+              </div>
+              <div>
+                <label className="block text-xs text-ink/60 mb-1">Profile picture</label>
+                <input type="file" accept="image/*" onChange={(e) => setPhotoFile(e.target.files?.[0] ?? null)} className="text-xs" />
+              </div>
+            </div>
             <Field label="Full name" value={form.full_name} onChange={(v) => setForm({ ...form, full_name: v })} required />
             <Field label="Rank" value={form.rank} onChange={(v) => setForm({ ...form, rank: v })} placeholder="e.g. Chief Engineer" />
             <Field label="Nationality" value={form.nationality} onChange={(v) => setForm({ ...form, nationality: v })} />
@@ -96,8 +135,8 @@ export default function CrewPage() {
             <Field label="Phone" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} />
             <Field label="Email" value={form.email} onChange={(v) => setForm({ ...form, email: v })} type="email" />
             <div className="col-span-3">
-              <button className="bg-harbor-900 text-paper text-sm px-4 py-2 rounded-sm hover:bg-harbor-800">
-                Save crew member
+              <button disabled={uploading} className="bg-harbor-900 text-paper text-sm px-4 py-2 rounded-sm hover:bg-harbor-800 disabled:opacity-60">
+                {uploading ? "Saving…" : "Save crew member"}
               </button>
             </div>
           </form>
@@ -107,6 +146,7 @@ export default function CrewPage() {
           <table className="log-table w-full">
             <thead>
               <tr>
+                <th></th>
                 <th>Name</th>
                 <th>Rank</th>
                 <th>Nationality</th>
@@ -117,7 +157,21 @@ export default function CrewPage() {
             <tbody>
               {crew.map((c) => (
                 <tr key={c.id}>
-                  <td className="font-medium">{c.full_name}</td>
+                  <td className="w-10">
+                    <div className="w-8 h-8 rounded-full bg-ink/5 border border-ink/15 overflow-hidden flex items-center justify-center">
+                      {c.photo_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={c.photo_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-[9px] text-ink/40">{c.full_name?.[0]}</span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="font-medium">
+                    <Link href={`/crew/${c.id}`} className="hover:underline hover:text-harbor-700">
+                      {c.full_name}
+                    </Link>
+                  </td>
                   <td className="text-ink/60">{c.rank ?? "—"}</td>
                   <td className="text-ink/60">{c.nationality ?? "—"}</td>
                   <td className="text-ink/60">{c.phone || c.email || "—"}</td>
@@ -137,7 +191,7 @@ export default function CrewPage() {
               ))}
               {crew.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="text-center text-ink/50 py-8">
+                  <td colSpan={6} className="text-center text-ink/50 py-8">
                     No crew records yet — add your first one above.
                   </td>
                 </tr>
