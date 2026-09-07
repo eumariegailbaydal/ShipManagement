@@ -14,6 +14,7 @@ export default async function DashboardPage() {
     { data: crew },
     { count: openWorkOrders },
     { data: expiringCerts },
+    { data: expiringShipCerts },
     { data: recentIncidents },
   ] = await Promise.all([
     supabase.from("ships").select("id, name, status"),
@@ -22,6 +23,12 @@ export default async function DashboardPage() {
     supabase
       .from("crew_certifications_status")
       .select("id, crew_id, expiry_date, status, crew(full_name), certificate_types(name)")
+      .in("status", ["expiring_soon", "expired"])
+      .order("expiry_date", { ascending: true })
+      .limit(6),
+    supabase
+      .from("ship_certifications_status")
+      .select("id, ship_id, expiry_date, status, cert_name, ships(name)")
       .in("status", ["expiring_soon", "expired"])
       .order("expiry_date", { ascending: true })
       .limit(6),
@@ -43,16 +50,16 @@ export default async function DashboardPage() {
           <StatCard label="Open work orders" value={openWorkOrders ?? 0} sub="maintenance" />
           <StatCard
             label="Certs needing attention"
-            value={expiringCerts?.length ?? 0}
-            sub="expiring or expired"
-            alert={(expiringCerts?.length ?? 0) > 0}
+            value={(expiringCerts?.length ?? 0) + (expiringShipCerts?.length ?? 0)}
+            sub="crew + ship, expiring or expired"
+            alert={(expiringCerts?.length ?? 0) + (expiringShipCerts?.length ?? 0) > 0}
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-6 mb-6">
+        <div className="grid grid-cols-3 gap-6 mb-6">
           <div className="panel rounded-sm">
             <div className="px-5 py-3 border-b border-ink/10 flex items-center justify-between">
-              <h2 className="text-sm font-medium">Certifications needing attention</h2>
+              <h2 className="text-sm font-medium">Crew certs needing attention</h2>
               <Link href="/certifications" className="text-xs text-harbor-700 hover:underline">
                 View all
               </Link>
@@ -65,6 +72,35 @@ export default async function DashboardPage() {
                       <tr key={c.id}>
                         <td>{c.crew?.full_name ?? "—"}</td>
                         <td className="text-ink/60">{c.certificate_types?.name ?? "—"}</td>
+                        <td>{c.expiry_date}</td>
+                        <td>
+                          <StatusBadge status={c.status} />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <p className="text-sm text-ink/50 p-4">Nothing needs attention right now.</p>
+              )}
+            </div>
+          </div>
+
+          <div className="panel rounded-sm">
+            <div className="px-5 py-3 border-b border-ink/10 flex items-center justify-between">
+              <h2 className="text-sm font-medium">Ship certs needing attention</h2>
+              <Link href="/ship-certifications" className="text-xs text-harbor-700 hover:underline">
+                View all
+              </Link>
+            </div>
+            <div className="p-2">
+              {expiringShipCerts && expiringShipCerts.length > 0 ? (
+                <table className="log-table w-full">
+                  <tbody>
+                    {expiringShipCerts.map((c: any) => (
+                      <tr key={c.id}>
+                        <td>{c.ships?.name ?? "—"}</td>
+                        <td className="text-ink/60">{c.cert_name ?? "—"}</td>
                         <td>{c.expiry_date}</td>
                         <td>
                           <StatusBadge status={c.status} />
