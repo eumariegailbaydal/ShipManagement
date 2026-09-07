@@ -42,3 +42,36 @@ table.log-table td {
 table.log-table tr:hover td {
   background: #fdfaf6;
 }
+
+/* --- Responsive adjustments for phone & tablet --- */
+@media (max-width: 767px) {
+  .grid-cols-2,
+  .grid-cols-3,
+  .grid-cols-4,
+  .grid-cols-5 {
+    grid-template-columns: 1fr !important;
+  }
+  .panel {
+    overflow-x: auto;
+  }
+  main .p-8 {
+    padding: 1rem !important;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .grid-cols-3,
+  .grid-cols-4,
+  .grid-cols-5 {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  main .p-8 {
+    padding: 1.5rem !important;
+  }
+}
+
+@media (max-width: 767px) {
+  table.log-table {
+    min-width: 640px;
+  }
+}
