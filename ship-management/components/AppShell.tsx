@@ -12,6 +12,7 @@ const NAV = [
   { href: "/ship-certifications", label: "Ship Certs & Inspections" },
   { href: "/maintenance", label: "Maintenance" },
   { href: "/work-orders", label: "Work Orders" },
+  { href: "/liquidation", label: "Liquidation" },
   { href: "/incidents", label: "Incidents" },
 ];
 
