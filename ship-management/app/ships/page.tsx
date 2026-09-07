@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase-browser";
 import AppShell from "@/components/AppShell";
 
@@ -176,7 +177,11 @@ export default function ShipsPage() {
                       />
                     </label>
                   </td>
-                  <td className="font-medium">{s.name}</td>
+                  <td className="font-medium">
+                    <Link href={`/ships/${s.id}`} className="hover:underline hover:text-harbor-700">
+                      {s.name}
+                    </Link>
+                  </td>
                   <td className="text-ink/60">{s.imo_number ?? "—"}</td>
                   <td className="text-ink/60">{s.type ?? "—"}</td>
                   <td className="text-ink/60">{s.flag ?? "—"}</td>
