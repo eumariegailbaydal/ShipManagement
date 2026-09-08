@@ -75,3 +75,24 @@ table.log-table tr:hover td {
     min-width: 640px;
   }
 }
+
+/* --- Print utilities (usable on any page) --- */
+@media print {
+  aside,
+  .print-hide {
+    display: none !important;
+  }
+  .print-show {
+    display: block !important;
+  }
+  main {
+    width: 100% !important;
+  }
+  body {
+    background: white !important;
+  }
+  .panel {
+    border: 1px solid #ccc !important;
+    overflow: visible !important;
+  }
+}
