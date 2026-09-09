@@ -17,6 +17,7 @@ const NAV = [
   { href: "/liquidation", label: "Liquidation" },
   { href: "/directory", label: "Directory" },
   { href: "/sea-service", label: "Sea Service" },
+  { href: "/daily-reports", label: "Daily Report" },
 ];
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
