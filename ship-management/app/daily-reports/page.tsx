@@ -238,3 +238,216 @@ export default function DailyReportsPage() {
                 {limits.map((l) => (
                   <tr key={l.id}>
                     <td>{l.ships?.name ?? "—"}</td>
+                    <td className="text-ink/60">{l.consumable_type}</td>
+                    <td className="text-ink/60">
+                      {l.daily_limit} {l.unit}
+                    </td>
+                  </tr>
+                ))}
+                {limits.length === 0 && (
+                  <tr>
+                    <td colSpan={3} className="text-center text-ink/50 py-4">
+                      No limits set yet.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {showForm && (
+          <form onSubmit={submitReport} className="panel rounded-sm p-5 mb-6">
+            <div className="grid grid-cols-4 gap-4 mb-4">
+              <div>
+                <label className="block text-xs text-ink/60 mb-1">Ship</label>
+                <select
+                  required
+                  value={form.ship_id}
+                  onChange={(e) => setForm({ ...form, ship_id: e.target.value })}
+                  className="w-full border border-ink/20 rounded-sm px-3 py-1.5 text-sm"
+                >
+                  <option value="">Select…</option>
+                  {ships.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <Field label="Date" value={form.report_date} onChange={(v) => setForm({ ...form, report_date: v })} type="date" required />
+              <Field label="Master" value={form.master_name} onChange={(v) => setForm({ ...form, master_name: v })} />
+              <Field label="Status" value={form.status} onChange={(v) => setForm({ ...form, status: v })} placeholder="e.g. Mining, Underway" />
+              <Field label="Location" value={form.location} onChange={(v) => setForm({ ...form, location: v })} />
+            </div>
+
+            <h3 className="text-sm font-medium mb-2 mt-4">Consumables used today</h3>
+            <datalist id="consumable-types">
+              {COMMON_TYPES.map((t) => (
+                <option key={t} value={t} />
+              ))}
+            </datalist>
+            <div className="space-y-2 mb-3">
+              {lines.map((l, i) => (
+                <div key={i} className="grid grid-cols-5 gap-2 items-center">
+                  <input
+                    list="consumable-types"
+                    value={l.consumable_type}
+                    onChange={(e) => updateLine(i, "consumable_type", e.target.value)}
+                    className="border border-ink/20 rounded-sm px-3 py-1.5 text-sm"
+                  />
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="Quantity consumed"
+                    value={l.quantity_consumed}
+                    onChange={(e) => updateLine(i, "quantity_consumed", e.target.value)}
+                    className="border border-ink/20 rounded-sm px-3 py-1.5 text-sm"
+                  />
+                  <input
+                    placeholder="Unit"
+                    value={l.unit}
+                    onChange={(e) => updateLine(i, "unit", e.target.value)}
+                    className="border border-ink/20 rounded-sm px-3 py-1.5 text-sm"
+                  />
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="ROB (optional)"
+                    value={l.rob}
+                    onChange={(e) => updateLine(i, "rob", e.target.value)}
+                    className="border border-ink/20 rounded-sm px-3 py-1.5 text-sm"
+                  />
+                  <button type="button" onClick={() => removeLine(i)} className="text-xs text-ink/40 hover:text-signal-bad text-left">
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+            <button type="button" onClick={addLine} className="text-xs text-harbor-700 hover:underline mb-4">
+              + Add another consumable
+            </button>
+
+            <div>
+              <label className="block text-xs text-ink/60 mb-1">Remarks</label>
+              <textarea
+                value={form.remarks}
+                onChange={(e) => setForm({ ...form, remarks: e.target.value })}
+                rows={2}
+                className="w-full border border-ink/20 rounded-sm px-3 py-1.5 text-sm mb-4"
+              />
+            </div>
+
+            <button disabled={saving} className="bg-harbor-900 text-paper text-sm px-4 py-2 rounded-sm hover:bg-harbor-800 disabled:opacity-60">
+              {saving ? "Saving…" : "Submit daily report"}
+            </button>
+          </form>
+        )}
+
+        <div className="space-y-2">
+          {reports.map((r) => (
+            <div key={r.id} className="panel rounded-sm overflow-hidden">
+              <button onClick={() => toggleExpand(r.id)} className="w-full text-left px-4 py-3 flex items-center justify-between hover:bg-paper/50">
+                <div>
+                  <p className="text-sm font-medium">
+                    {r.ships?.name ?? "—"} · {r.report_date}
+                  </p>
+                  <p className="text-xs text-ink/50 mt-0.5">
+                    {r.status || "—"} {r.location ? `· ${r.location}` : ""} {r.master_name ? `· Master: ${r.master_name}` : ""}
+                  </p>
+                </div>
+                <span className="text-xs text-ink/40">{expanded === r.id ? "▲" : "▼"}</span>
+              </button>
+              {expanded === r.id && (
+                <div className="border-t border-ink/10 p-4">
+                  <table className="log-table w-full">
+                    <thead>
+                      <tr>
+                        <th>Consumable</th>
+                        <th>Consumed</th>
+                        <th>Daily limit</th>
+                        <th>ROB</th>
+                        <th>Flag</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(linesByReport[r.id] ?? []).map((l) => (
+                        <tr key={l.id}>
+                          <td className="font-medium">{l.consumable_type}</td>
+                          <td className="text-ink/60">
+                            {l.quantity_consumed} {l.unit}
+                          </td>
+                          <td className="text-ink/60">{l.daily_limit != null ? `${l.daily_limit} ${l.unit}` : "No limit set"}</td>
+                          <td className="text-ink/60">{l.rob ?? "—"}</td>
+                          <td>
+                            {l.over_limit ? (
+                              <span className="inline-block text-xs px-2 py-0.5 rounded-full border bg-signal-bad/10 text-signal-bad border-signal-bad/30">
+                                Exceeds limit
+                              </span>
+                            ) : (
+                              <span className="inline-block text-xs px-2 py-0.5 rounded-full border bg-signal-ok/10 text-signal-ok border-signal-ok/30">
+                                Within limit
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                      {(linesByReport[r.id] ?? []).length === 0 && (
+                        <tr>
+                          <td colSpan={5} className="text-center text-ink/50 py-6">
+                            No consumables logged for this report.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                  {r.remarks && (
+                    <div className="mt-3">
+                      <p className="text-xs text-ink/40 mb-1">Remarks</p>
+                      <p className="text-sm text-ink/70">{r.remarks}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+          {reports.length === 0 && (
+            <div className="panel rounded-sm p-8 text-center text-ink/50 text-sm">
+              No daily reports yet — click "New daily report" above.
+            </div>
+          )}
+        </div>
+      </div>
+    </AppShell>
+  );
+}
+
+function Field({
+  label,
+  value,
+  onChange,
+  type = "text",
+  required,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  type?: string;
+  required?: boolean;
+  placeholder?: string;
+}) {
+  return (
+    <div>
+      <label className="block text-xs text-ink/60 mb-1">{label}</label>
+      <input
+        type={type}
+        required={required}
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full border border-ink/20 rounded-sm px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-harbor-700"
+      />
+    </div>
+  );
+}
