@@ -79,14 +79,19 @@ export default function WorkOrdersPage() {
     load();
   }
 
-    async function notify(order: WorkOrder, channel: "email" | "sms" | "both") {
+  async function sendEmail(order: WorkOrder) {
     if (!order.contact_id) {
-      alert("Assign a contact to this work order first.");
+      alert("Tag a contact from your Directory to this work order first.");
+      return;
+    }
+    const contact = contacts.find((c) => c.id === order.contact_id);
+    if (!contact?.email) {
+      alert("This contact doesn't have an email address on file in your Directory.");
       return;
     }
     setNotifying(order.id);
     const { data, error } = await supabase.functions.invoke("notify-work-order", {
-      body: { work_order_id: order.id, contact_id: order.contact_id, channel },
+      body: { work_order_id: order.id, contact_id: order.contact_id, channel: "email" },
     });
     setNotifying(null);
 
@@ -105,15 +110,42 @@ export default function WorkOrdersPage() {
       alert(`Couldn't send: ${data.error}`);
       return;
     }
-    alert("Sent successfully.");
+    alert(`Email sent to ${contact.name}.`);
   }
+
+  async function sendSms(order: WorkOrder) {
+    if (!order.contact_id) {
+      alert("Tag a contact from your Directory to this work order first.");
+      return;
+    }
+    setNotifying(order.id);
+    const { data, error } = await supabase.functions.invoke("notify-work-order", {
+      body: { work_order_id: order.id, contact_id: order.contact_id, channel: "sms" },
+    });
+    setNotifying(null);
+    if (error) {
+      let detail = error.message;
+      try {
+        const body = await error.context.json();
+        if (body?.error) detail = body.error;
+      } catch {}
+      alert(`Couldn't send: ${detail}`);
+      return;
+    }
+    if (data?.success === false) {
+      alert(`Couldn't send: ${data.error}`);
+      return;
+    }
+    alert("SMS sent.");
+  }
+
   return (
     <AppShell>
       <div className="p-8 max-w-6xl">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-xl font-semibold mb-1">Work orders</h1>
-            <p className="text-sm text-ink/60">Open → In progress → Completed → Verified.</p>
+            <p className="text-sm text-ink/60">Open → In progress → Completed → Verified. Tag a vendor from your Directory to reach out directly.</p>
           </div>
           <button
             onClick={() => setShowForm(!showForm)}
@@ -159,7 +191,7 @@ export default function WorkOrdersPage() {
               />
             </div>
             <div>
-              <label className="block text-xs text-ink/60 mb-1">Notify contact (optional)</label>
+              <label className="block text-xs text-ink/60 mb-1">Vendor / contact (from Directory)</label>
               <select
                 value={form.contact_id}
                 onChange={(e) => setForm({ ...form, contact_id: e.target.value })}
@@ -188,9 +220,9 @@ export default function WorkOrdersPage() {
                 <th>Ship</th>
                 <th>Description</th>
                 <th>Assigned to</th>
-                <th>Contact</th>
+                <th>Vendor / Contact</th>
                 <th>Status</th>
-                <th>Notify</th>
+                <th>Contact</th>
               </tr>
             </thead>
             <tbody>
@@ -230,17 +262,17 @@ export default function WorkOrdersPage() {
                     </div>
                   </td>
                   <td>
-                    <div className="flex gap-2">
+                    <div className="flex items-center gap-3">
                       <button
                         disabled={notifying === o.id}
-                        onClick={() => notify(o, "email")}
+                        onClick={() => sendEmail(o)}
                         className="text-xs text-harbor-700 hover:underline disabled:opacity-50"
                       >
-                        Email
+                        {notifying === o.id ? "Sending…" : "Email Vendor"}
                       </button>
                       <button
                         disabled={notifying === o.id}
-                        onClick={() => notify(o, "sms")}
+                        onClick={() => sendSms(o)}
                         className="text-xs text-harbor-700 hover:underline disabled:opacity-50"
                       >
                         SMS
