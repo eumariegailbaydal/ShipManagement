@@ -27,13 +27,14 @@ type Expense = {
   category: string | null;
   description: string | null;
   amount: number;
+  approved_amount: number | null;
   receipt_url: string | null;
 };
 
 type CrewOption = { id: string; full_name: string };
 type ShipOption = { id: string; name: string };
 
-const CATEGORIES = ["Fuel", "Provisions / Food", "Repairs & Maintenance", "Port Fees & Dues", "Transportation", "Communication", "Medical", "Miscellaneous"];
+const CATEGORIES = ["Fuel", "Provisions / Food", "Repairs & Maintenance", "Port Fees & Dues", "Transportation", "Communication", "Medical", "Inspector Fees / SOP", "Miscellaneous"];
 
 function money(n: number) {
   return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -63,6 +64,7 @@ export default function LiquidationPage() {
     category: CATEGORIES[0],
     description: "",
     amount: "",
+    approved_amount: "",
     receiptFile: null as File | null,
   });
 
@@ -128,95 +130,7 @@ export default function LiquidationPage() {
 
   async function addExpense(liquidationId: string, e: React.FormEvent) {
     e.preventDefault();
-    setUploading(true);
-    let receiptUrl: string | null = null;
-
-    if (expenseForm.receiptFile) {
-      const path = `receipts/${liquidationId}/${Date.now()}_${expenseForm.receiptFile.name}`;
-      const { error: uploadError } = await supabase.storage.from("documents").upload(path, expenseForm.receiptFile);
-      if (uploadError) {
-        alert(`Couldn't upload receipt: ${uploadError.message}`);
-        setUploading(false);
-        return;
-      }
-      receiptUrl = path;
-    }
-
-    const { error } = await supabase.from("liquidation_expenses").insert({
-      liquidation_id: liquidationId,
-      expense_date: expenseForm.expense_date,
-      category: expenseForm.category,
-      description: expenseForm.description || null,
-      amount: Number(expenseForm.amount) || 0,
-      receipt_url: receiptUrl,
-    });
-    setUploading(false);
-    if (error) {
-      alert(`Couldn't save this expense: ${error.message}`);
-      return;
-    }
-    setExpenseForm({ expense_date: new Date().toISOString().slice(0, 10), category: CATEGORIES[0], description: "", amount: "", receiptFile: null });
-    loadExpenses(liquidationId);
-    load();
-  }
-
-  async function getReceiptLink(path: string) {
-    const { data } = await supabase.storage.from("documents").createSignedUrl(path, 60 * 5);
-    if (data?.signedUrl) window.open(data.signedUrl, "_blank");
-  }
-
-  function toggleExpand(l: Liquidation) {
-    if (expanded === l.id) {
-      setExpanded(null);
-    } else {
-      setExpanded(l.id);
-      if (!expenses[l.id]) loadExpenses(l.id);
-    }
-  }
-
-  function downloadCsv(l: Liquidation) {
-    const rows = expenses[l.id] ?? [];
-    const lines = [
-      ["Liquidation Report"],
-      ["Crew Member", l.crew?.full_name ?? ""],
-      ["Ship", l.ships?.name ?? ""],
-      ["Purpose", l.purpose ?? ""],
-      ["Received Date", l.received_date],
-      ["Previous Balance", money(l.previous_balance)],
-      ["Received Amount", money(l.received_amount)],
-      [],
-      ["Date", "Category", "Description", "Amount", "Receipt"],
-      ...rows.map((r) => [r.expense_date, r.category ?? "", r.description ?? "", money(r.amount), r.receipt_url ? "Yes" : "No"]),
-      [],
-      ["Total Expenses", money(l.total_expenses)],
-      ["Balance (carried forward)", money(l.balance)],
-    ];
-    const csv = lines.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `liquidation_${(l.crew?.full_name ?? "crew").replace(/\s+/g, "_")}_${l.received_date}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  return (
-    <AppShell>
-      <div className="p-8 max-w-6xl">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-xl font-semibold mb-1">Liquidation</h1>
-            <p className="text-sm text-ink/60">Cash received, itemized expenses with receipts, and running balance per crew member.</p>
-          </div>
-          <button
-            onClick={() => setShowNewForm(!showNewForm)}
-            className="bg-harbor-900 text-paper text-sm px-4 py-2 rounded-sm hover:bg-harbor-800"
-          >
-            {showNewForm ? "Cancel" : "Record money received"}
-          </button>
-        </div>
-
+    
         {showNewForm && (
           <form onSubmit={addLiquidation} className="panel rounded-sm p-5 mb-6 grid grid-cols-3 gap-4">
             <div>
@@ -318,7 +232,9 @@ export default function LiquidationPage() {
                         <th>Date</th>
                         <th>Category</th>
                         <th>Description</th>
-                        <th>Amount</th>
+                        <th>Approved Amt</th>
+                        <th>Amount Paid</th>
+                        <th>Match</th>
                         <th>Receipt</th>
                       </tr>
                     </thead>
@@ -328,7 +244,9 @@ export default function LiquidationPage() {
                           <td className="text-ink/60">{ex.expense_date}</td>
                           <td className="text-ink/60">{ex.category ?? "—"}</td>
                           <td className="text-ink/60">{ex.description ?? "—"}</td>
+                          <td className="data-label text-ink/60">{ex.approved_amount != null ? money(ex.approved_amount) : "—"}</td>
                           <td className="data-label">{money(ex.amount)}</td>
+                          <td>{matchBadge(ex)}</td>
                           <td>
                             {ex.receipt_url ? (
                               <button onClick={() => getReceiptLink(ex.receipt_url!)} className="text-xs text-harbor-700 hover:underline">
@@ -342,7 +260,7 @@ export default function LiquidationPage() {
                       ))}
                       {(expenses[l.id] ?? []).length === 0 && (
                         <tr>
-                          <td colSpan={5} className="text-center text-ink/50 py-6">
+                          <td colSpan={7} className="text-center text-ink/50 py-6">
                             No expenses logged yet.
                           </td>
                         </tr>
@@ -350,7 +268,7 @@ export default function LiquidationPage() {
                     </tbody>
                   </table>
 
-                  <form onSubmit={(e) => addExpense(l.id, e)} className="grid grid-cols-5 gap-3 items-end bg-paper/60 p-4 rounded-sm border border-ink/10">
+                  <form onSubmit={(e) => addExpense(l.id, e)} className="grid grid-cols-6 gap-3 items-end bg-paper/60 p-4 rounded-sm border border-ink/10">
                     <div>
                       <label className="block text-xs text-ink/60 mb-1">Date</label>
                       <input
@@ -384,7 +302,18 @@ export default function LiquidationPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-ink/60 mb-1">Amount</label>
+                      <label className="block text-xs text-ink/60 mb-1">Approved amount</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        placeholder="Optional"
+                        value={expenseForm.approved_amount}
+                        onChange={(e) => setExpenseForm({ ...expenseForm, approved_amount: e.target.value })}
+                        className="w-full border border-ink/20 rounded-sm px-2 py-1.5 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-ink/60 mb-1">Amount paid</label>
                       <input
                         type="number"
                         step="0.01"
@@ -403,7 +332,10 @@ export default function LiquidationPage() {
                         className="w-full text-xs"
                       />
                     </div>
-                    <div className="col-span-5">
+                    <div className="col-span-6">
+                      <p className="text-xs text-ink/40 mb-2">
+                        Leave "Approved amount" blank for ordinary expenses. Fill it in when the company set a specific amount beforehand (e.g. an inspector's SOP fee) — the system will flag it automatically if what's actually paid doesn't match.
+                      </p>
                       <button
                         disabled={uploading}
                         className="bg-harbor-900 text-paper text-sm px-4 py-1.5 rounded-sm hover:bg-harbor-800 disabled:opacity-60"
@@ -450,9 +382,3 @@ function Field({
         required={required}
         placeholder={placeholder}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full border border-ink/20 rounded-sm px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-harbor-700"
-      />
-    </div>
-  );
-}
