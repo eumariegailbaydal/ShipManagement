@@ -13,13 +13,18 @@ type WorkOrder = {
   assigned_to: string | null;
   created_at: string;
   contact_id: string | null;
+  photo_url: string | null;
   ships: { name: string } | null;
 };
 
 type ShipOption = { id: string; name: string };
-type ContactOption = { id: string; name: string; email: string | null; phone: string | null };
+type ContactOption = { id: string; name: string; company: string | null; email: string | null; phone: string | null };
 
 const STATUSES = ["open", "in_progress", "completed", "verified"];
+
+function contactLabel(c: ContactOption) {
+  return c.company ? `${c.name} — ${c.company}` : c.name;
+}
 
 export default function WorkOrdersPage() {
   const supabase = createClient();
@@ -28,6 +33,8 @@ export default function WorkOrdersPage() {
   const [contacts, setContacts] = useState<ContactOption[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ ship_id: "", description: "", assigned_to: "", contact_id: "" });
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [saving, setSaving] = useState(false);
   const [notifying, setNotifying] = useState<string | null>(null);
 
   async function load() {
@@ -40,7 +47,7 @@ export default function WorkOrdersPage() {
     const { data: shipData } = await supabase.from("ships").select("id, name").order("name");
     setShips(shipData ?? []);
 
-    const { data: contactData } = await supabase.from("contacts").select("id, name, email, phone").order("name");
+    const { data: contactData } = await supabase.from("contacts").select("id, name, company, email, phone").order("name");
     setContacts(contactData ?? []);
   }
 
@@ -50,18 +57,35 @@ export default function WorkOrdersPage() {
 
   async function addOrder(e: React.FormEvent) {
     e.preventDefault();
+    setSaving(true);
+
+    let photoUrl: string | null = null;
+    if (photoFile) {
+      const path = `work-order-photos/${Date.now()}_${photoFile.name}`;
+      const { error: uploadError } = await supabase.storage.from("documents").upload(path, photoFile);
+      if (uploadError) {
+        alert(`Couldn't upload the sample photo: ${uploadError.message}`);
+        setSaving(false);
+        return;
+      }
+      photoUrl = path;
+    }
+
     const { error } = await supabase.from("work_orders").insert({
       ship_id: form.ship_id,
       description: form.description,
       assigned_to: form.assigned_to || null,
       contact_id: form.contact_id || null,
+      photo_url: photoUrl,
       status: "open",
     });
+    setSaving(false);
     if (error) {
       alert(`Couldn't create this work order: ${error.message}`);
       return;
     }
     setForm({ ship_id: "", description: "", assigned_to: "", contact_id: "" });
+    setPhotoFile(null);
     setShowForm(false);
     load();
   }
@@ -77,6 +101,11 @@ export default function WorkOrdersPage() {
   async function setOrderContact(id: string, contactId: string) {
     await supabase.from("work_orders").update({ contact_id: contactId || null }).eq("id", id);
     load();
+  }
+
+  async function viewPhoto(path: string) {
+    const { data } = await supabase.storage.from("documents").createSignedUrl(path, 60 * 5);
+    if (data?.signedUrl) window.open(data.signedUrl, "_blank");
   }
 
   async function sendEmail(order: WorkOrder) {
@@ -110,7 +139,7 @@ export default function WorkOrdersPage() {
       alert(`Couldn't send: ${data.error}`);
       return;
     }
-    alert(`Email sent to ${contact.name}.`);
+    alert(`Email sent to ${contact.name}${order.photo_url ? " with the sample photo attached." : "."}`);
   }
 
   async function sendSms(order: WorkOrder) {
@@ -200,14 +229,27 @@ export default function WorkOrdersPage() {
                 <option value="">— None —</option>
                 {contacts.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.name}
+                    {contactLabel(c)}
                   </option>
                 ))}
               </select>
             </div>
+            <div>
+              <label className="block text-xs text-ink/60 mb-1">Sample photo (optional)</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setPhotoFile(e.target.files?.[0] ?? null)}
+                className="w-full text-xs"
+              />
+              {photoFile && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={URL.createObjectURL(photoFile)} alt="" className="mt-2 h-16 rounded-sm border border-ink/15 object-cover" />
+              )}
+            </div>
             <div className="col-span-3">
-              <button className="bg-harbor-900 text-paper text-sm px-4 py-2 rounded-sm hover:bg-harbor-800">
-                Create work order
+              <button disabled={saving} className="bg-harbor-900 text-paper text-sm px-4 py-2 rounded-sm hover:bg-harbor-800 disabled:opacity-60">
+                {saving ? "Saving…" : "Create work order"}
               </button>
             </div>
           </form>
@@ -219,6 +261,7 @@ export default function WorkOrdersPage() {
               <tr>
                 <th>Ship</th>
                 <th>Description</th>
+                <th>Photo</th>
                 <th>Assigned to</th>
                 <th>Vendor / Contact</th>
                 <th>Status</th>
@@ -230,6 +273,15 @@ export default function WorkOrdersPage() {
                 <tr key={o.id}>
                   <td className="font-medium">{o.ships?.name ?? "—"}</td>
                   <td className="text-ink/60">{o.description ?? "—"}</td>
+                  <td>
+                    {o.photo_url ? (
+                      <button onClick={() => viewPhoto(o.photo_url!)} className="text-xs text-harbor-700 hover:underline">
+                        View
+                      </button>
+                    ) : (
+                      <span className="text-xs text-ink/30">—</span>
+                    )}
+                  </td>
                   <td className="text-ink/60">{o.assigned_to ?? "—"}</td>
                   <td>
                     <select
@@ -240,7 +292,7 @@ export default function WorkOrdersPage() {
                       <option value="">— None —</option>
                       {contacts.map((c) => (
                         <option key={c.id} value={c.id}>
-                          {c.name}
+                          {contactLabel(c)}
                         </option>
                       ))}
                     </select>
@@ -283,7 +335,7 @@ export default function WorkOrdersPage() {
               ))}
               {orders.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="text-center text-ink/50 py-8">
+                  <td colSpan={7} className="text-center text-ink/50 py-8">
                     No work orders yet.
                   </td>
                 </tr>
