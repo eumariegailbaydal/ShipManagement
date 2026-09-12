@@ -143,6 +143,16 @@ export default function WorkOrdersPage() {
     load();
   }
 
+  async function deleteOrder(id: string) {
+    if (!confirm("Delete this work order? This can't be undone.")) return;
+    const { error } = await supabase.from("work_orders").delete().eq("id", id);
+    if (error) {
+      alert(`Couldn't delete this work order: ${error.message}`);
+      return;
+    }
+    load();
+  }
+
   async function viewPhoto(path: string) {
     const { data } = await supabase.storage.from("documents").createSignedUrl(path, 60 * 5);
     if (data?.signedUrl) window.open(data.signedUrl, "_blank");
@@ -222,13 +232,12 @@ export default function WorkOrdersPage() {
             {showForm ? "Cancel" : "New work order"}
           </button>
         </div>
-
-        {showForm && (
+                {showForm && (
           <form onSubmit={addOrder} className="panel rounded-sm p-5 mb-6 grid grid-cols-3 gap-4">
             <div>
               <label className="block text-xs text-ink/60 mb-1">Ship</label>
               <select
-                                required
+                required
                 value={form.ship_id}
                 onChange={(e) => setForm({ ...form, ship_id: e.target.value })}
                 className="w-full border border-ink/20 rounded-sm px-3 py-1.5 text-sm"
@@ -343,6 +352,7 @@ export default function WorkOrdersPage() {
                 <th>Vendors</th>
                 <th>Status</th>
                 <th>Contact</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -439,12 +449,17 @@ export default function WorkOrdersPage() {
                         </button>
                       </div>
                     </td>
+                    <td>
+                      <button onClick={() => deleteOrder(o.id)} className="text-xs text-ink/40 hover:text-signal-bad">
+                        Delete
+                      </button>
+                    </td>
                   </tr>
                 );
               })}
               {orders.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="text-center text-ink/50 py-8">
+                  <td colSpan={9} className="text-center text-ink/50 py-8">
                     No work orders yet.
                   </td>
                 </tr>
