@@ -130,7 +130,135 @@ export default function LiquidationPage() {
 
   async function addExpense(liquidationId: string, e: React.FormEvent) {
     e.preventDefault();
-    
+    setUploading(true);
+    let receiptUrl: string | null = null;
+
+    if (expenseForm.receiptFile) {
+      const path = `receipts/${liquidationId}/${Date.now()}_${expenseForm.receiptFile.name}`;
+      const { error: uploadError } = await supabase.storage.from("documents").upload(path, expenseForm.receiptFile);
+      if (uploadError) {
+        alert(`Couldn't upload receipt: ${uploadError.message}`);
+        setUploading(false);
+        return;
+      }
+      receiptUrl = path;
+    }
+
+    const { error } = await supabase.from("liquidation_expenses").insert({
+      liquidation_id: liquidationId,
+      expense_date: expenseForm.expense_date,
+      category: expenseForm.category,
+      description: expenseForm.description || null,
+      amount: Number(expenseForm.amount) || 0,
+      approved_amount: expenseForm.approved_amount ? Number(expenseForm.approved_amount) : null,
+      receipt_url: receiptUrl,
+    });
+    setUploading(false);
+    if (error) {
+      alert(`Couldn't save this expense: ${error.message}`);
+      return;
+    }
+    setExpenseForm({ expense_date: new Date().toISOString().slice(0, 10), category: CATEGORIES[0], description: "", amount: "", approved_amount: "", receiptFile: null });
+    loadExpenses(liquidationId);
+    load();
+  }
+
+  async function getReceiptLink(path: string) {
+    const { data } = await supabase.storage.from("documents").createSignedUrl(path, 60 * 5);
+    if (data?.signedUrl) window.open(data.signedUrl, "_blank");
+  }
+
+  function toggleExpand(l: Liquidation) {
+    if (expanded === l.id) {
+      setExpanded(null);
+    } else {
+      setExpanded(l.id);
+      if (!expenses[l.id]) loadExpenses(l.id);
+    }
+  }
+
+  function matchBadge(ex: Expense) {
+    if (ex.approved_amount == null) {
+      return <span className="text-xs text-ink/30">No approved amount on file</span>;
+    }
+    const diff = ex.amount - ex.approved_amount;
+    if (Math.abs(diff) < 0.01) {
+      return (
+        <span className="inline-block text-xs px-2 py-0.5 rounded-full border bg-signal-ok/10 text-signal-ok border-signal-ok/30">
+          Matches
+        </span>
+      );
+    }
+    if (diff > 0) {
+      return (
+        <span className="inline-block text-xs px-2 py-0.5 rounded-full border bg-signal-bad/10 text-signal-bad border-signal-bad/30">
+          Overpaid by {money(diff)}
+        </span>
+      );
+    }
+    return (
+      <span className="inline-block text-xs px-2 py-0.5 rounded-full border bg-signal-warn/10 text-signal-warn border-signal-warn/30">
+        Underpaid by {money(Math.abs(diff))}
+      </span>
+    );
+  }
+
+  function downloadCsv(l: Liquidation) {
+    const rows = expenses[l.id] ?? [];
+    const lines = [
+      ["Liquidation Report"],
+      ["Crew Member", l.crew?.full_name ?? ""],
+      ["Ship", l.ships?.name ?? ""],
+      ["Purpose", l.purpose ?? ""],
+      ["Received Date", l.received_date],
+      ["Previous Balance", money(l.previous_balance)],
+      ["Received Amount", money(l.received_amount)],
+      [],
+      ["Date", "Category", "Description", "Approved Amount", "Amount Paid", "Difference", "Receipt"],
+      ...rows.map((r) => [
+        r.expense_date,
+        r.category ?? "",
+        r.description ?? "",
+        r.approved_amount != null ? money(r.approved_amount) : "",
+        money(r.amount),
+        r.approved_amount != null ? money(r.amount - r.approved_amount) : "",
+        r.receipt_url ? "Yes" : "No",
+      ]),
+      [],
+      ["Total Expenses", money(l.total_expenses)],
+      ["Balance (carried forward)", money(l.balance)],
+    ];
+    const csv = lines.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `liquidation_${(l.crew?.full_name ?? "crew").replace(/\s+/g, "_")}_${l.received_date}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  return (
+    <AppShell>
+      <div className="p-8 max-w-6xl">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-xl font-semibold mb-1">Liquidation</h1>
+            <p className="text-sm text-ink/60">Cash received, itemized expenses with receipts, and running balance per crew member.</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Link href="/liquidation/statement" className="border border-ink/20 text-sm px-4 py-2 rounded-sm hover:bg-ink/5">
+              Monthly statement
+            </Link>
+            <button
+              onClick={() => setShowNewForm(!showNewForm)}
+              className="bg-harbor-900 text-paper text-sm px-4 py-2 rounded-sm hover:bg-harbor-800"
+            >
+              {showNewForm ? "Cancel" : "Record money received"}
+            </button>
+          </div>
+        </div>
+
         {showNewForm && (
           <form onSubmit={addLiquidation} className="panel rounded-sm p-5 mb-6 grid grid-cols-3 gap-4">
             <div>
@@ -382,3 +510,9 @@ function Field({
         required={required}
         placeholder={placeholder}
         value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full border border-ink/20 rounded-sm px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-harbor-700"
+      />
+    </div>
+  );
+}
