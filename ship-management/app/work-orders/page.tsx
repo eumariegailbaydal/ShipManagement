@@ -8,6 +8,10 @@ import StatusBadge from "@/components/StatusBadge";
 type WorkOrder = {
   id: string;
   description: string | null;
+  quantity: string | null;
+  size: string | null;
+  model: string | null;
+  additional_info: string | null;
   status: string;
   reported_by: string | null;
   assigned_to: string | null;
@@ -33,7 +37,7 @@ export default function WorkOrdersPage() {
   const [vendorsByOrder, setVendorsByOrder] = useState<Record<string, string[]>>({});
 
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ ship_id: "", description: "", assigned_to: "" });
+  const [form, setForm] = useState({ ship_id: "", description: "", quantity: "", size: "", model: "", additional_info: "", assigned_to: "" });
   const [selectedVendors, setSelectedVendors] = useState<string[]>([]);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
@@ -90,6 +94,10 @@ export default function WorkOrdersPage() {
       .insert({
         ship_id: form.ship_id,
         description: form.description,
+        quantity: form.quantity || null,
+        size: form.size || null,
+        model: form.model || null,
+        additional_info: form.additional_info || null,
         assigned_to: form.assigned_to || null,
         photo_url: photoUrl,
         status: "open",
@@ -108,7 +116,7 @@ export default function WorkOrdersPage() {
     }
 
     setSaving(false);
-    setForm({ ship_id: "", description: "", assigned_to: "" });
+    setForm({ ship_id: "", description: "", quantity: "", size: "", model: "", additional_info: "", assigned_to: "" });
     setSelectedVendors([]);
     setPhotoFile(null);
     setShowForm(false);
@@ -220,7 +228,7 @@ export default function WorkOrdersPage() {
             <div>
               <label className="block text-xs text-ink/60 mb-1">Ship</label>
               <select
-                required
+                                required
                 value={form.ship_id}
                 onChange={(e) => setForm({ ...form, ship_id: e.target.value })}
                 className="w-full border border-ink/20 rounded-sm px-3 py-1.5 text-sm"
@@ -243,10 +251,46 @@ export default function WorkOrdersPage() {
               />
             </div>
             <div>
+              <label className="block text-xs text-ink/60 mb-1">Quantity / Amount</label>
+              <input
+                value={form.quantity}
+                onChange={(e) => setForm({ ...form, quantity: e.target.value })}
+                placeholder="e.g. 5 pcs"
+                className="w-full border border-ink/20 rounded-sm px-3 py-1.5 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-ink/60 mb-1">Size</label>
+              <input
+                value={form.size}
+                onChange={(e) => setForm({ ...form, size: e.target.value })}
+                placeholder="e.g. 10mm"
+                className="w-full border border-ink/20 rounded-sm px-3 py-1.5 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-ink/60 mb-1">Model</label>
+              <input
+                value={form.model}
+                onChange={(e) => setForm({ ...form, model: e.target.value })}
+                placeholder="e.g. XR-450"
+                className="w-full border border-ink/20 rounded-sm px-3 py-1.5 text-sm"
+              />
+            </div>
+            <div>
               <label className="block text-xs text-ink/60 mb-1">Assigned to</label>
               <input
                 value={form.assigned_to}
                 onChange={(e) => setForm({ ...form, assigned_to: e.target.value })}
+                className="w-full border border-ink/20 rounded-sm px-3 py-1.5 text-sm"
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-xs text-ink/60 mb-1">Additional info</label>
+              <input
+                value={form.additional_info}
+                onChange={(e) => setForm({ ...form, additional_info: e.target.value })}
+                placeholder="Anything else the vendor should know"
                 className="w-full border border-ink/20 rounded-sm px-3 py-1.5 text-sm"
               />
             </div>
@@ -293,6 +337,7 @@ export default function WorkOrdersPage() {
               <tr>
                 <th>Ship</th>
                 <th>Description</th>
+                <th>Details</th>
                 <th>Photo</th>
                 <th>Assigned to</th>
                 <th>Vendors</th>
@@ -309,6 +354,13 @@ export default function WorkOrdersPage() {
                   <tr key={o.id}>
                     <td className="font-medium">{o.ships?.name ?? "—"}</td>
                     <td className="text-ink/60">{o.description ?? "—"}</td>
+                    <td className="text-ink/60 text-xs">
+                      {o.quantity && <div>Qty: {o.quantity}</div>}
+                      {o.size && <div>Size: {o.size}</div>}
+                      {o.model && <div>Model: {o.model}</div>}
+                      {o.additional_info && <div className="text-ink/50 italic">{o.additional_info}</div>}
+                      {!o.quantity && !o.size && !o.model && !o.additional_info && "—"}
+                    </td>
                     <td>
                       {o.photo_url ? (
                         <button onClick={() => viewPhoto(o.photo_url!)} className="text-xs text-harbor-700 hover:underline">
@@ -392,7 +444,7 @@ export default function WorkOrdersPage() {
               })}
               {orders.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="text-center text-ink/50 py-8">
+                  <td colSpan={8} className="text-center text-ink/50 py-8">
                     No work orders yet.
                   </td>
                 </tr>
