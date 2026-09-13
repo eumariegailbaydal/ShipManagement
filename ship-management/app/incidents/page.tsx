@@ -10,6 +10,8 @@ type Incident = {
   severity: string;
   reported_by: string | null;
   created_at: string;
+  status: string;
+  resolved_at: string | null;
   ships: { name: string } | null;
 };
 
@@ -20,6 +22,7 @@ export default function IncidentsPage() {
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [ships, setShips] = useState<ShipOption[]>([]);
   const [showForm, setShowForm] = useState(false);
+  const [tab, setTab] = useState<"open" | "resolved">("open");
   const [form, setForm] = useState({ ship_id: "", description: "", severity: "low", reported_by: "" });
 
   async function load() {
@@ -44,6 +47,7 @@ export default function IncidentsPage() {
       description: form.description,
       severity: form.severity,
       reported_by: form.reported_by || null,
+      status: "open",
     });
     if (error) {
       alert(`Couldn't save this incident: ${error.message}`);
@@ -54,12 +58,26 @@ export default function IncidentsPage() {
     load();
   }
 
+  async function markResolved(id: string) {
+    await supabase.from("incidents").update({ status: "resolved", resolved_at: new Date().toISOString() }).eq("id", id);
+    load();
+  }
+
+  async function reopen(id: string) {
+    await supabase.from("incidents").update({ status: "open", resolved_at: null }).eq("id", id);
+    load();
+  }
+
   const severityColor: Record<string, string> = {
     low: "text-ink/60",
     medium: "text-signal-warn",
     high: "text-signal-bad",
     critical: "text-signal-bad font-semibold",
   };
+
+  const openIncidents = incidents.filter((i) => i.status !== "resolved");
+  const resolvedIncidents = incidents.filter((i) => i.status === "resolved");
+  const visible = tab === "open" ? openIncidents : resolvedIncidents;
 
   return (
     <AppShell>
@@ -145,6 +163,26 @@ export default function IncidentsPage() {
           </form>
         )}
 
+        {/* Tabs */}
+        <div className="flex gap-2 mb-4 print-hide">
+          <button
+            onClick={() => setTab("open")}
+            className={`text-sm px-4 py-2 rounded-sm border ${
+              tab === "open" ? "bg-harbor-900 text-paper border-harbor-900" : "border-ink/20 text-ink/60 hover:bg-ink/5"
+            }`}
+          >
+            Open ({openIncidents.length})
+          </button>
+          <button
+            onClick={() => setTab("resolved")}
+            className={`text-sm px-4 py-2 rounded-sm border ${
+              tab === "resolved" ? "bg-harbor-900 text-paper border-harbor-900" : "border-ink/20 text-ink/60 hover:bg-ink/5"
+            }`}
+          >
+            Resolved ({resolvedIncidents.length})
+          </button>
+        </div>
+
         <div className="panel rounded-sm">
           <table className="log-table w-full">
             <thead>
@@ -154,22 +192,38 @@ export default function IncidentsPage() {
                 <th>Severity</th>
                 <th>Reported by</th>
                 <th>Date</th>
+                {tab === "resolved" && <th>Resolved</th>}
+                <th className="print-hide"></th>
               </tr>
             </thead>
             <tbody>
-              {incidents.map((i) => (
+              {visible.map((i) => (
                 <tr key={i.id}>
                   <td className="font-medium">{i.ships?.name ?? "—"}</td>
                   <td className="text-ink/60">{i.description ?? "—"}</td>
                   <td className={`capitalize ${severityColor[i.severity] ?? ""}`}>{i.severity}</td>
                   <td className="text-ink/60">{i.reported_by ?? "—"}</td>
                   <td className="text-ink/60">{new Date(i.created_at).toLocaleDateString()}</td>
+                  {tab === "resolved" && (
+                    <td className="text-ink/60">{i.resolved_at ? new Date(i.resolved_at).toLocaleDateString() : "—"}</td>
+                  )}
+                  <td className="print-hide">
+                    {tab === "open" ? (
+                      <button onClick={() => markResolved(i.id)} className="text-xs text-harbor-700 hover:underline">
+                        Mark Resolved
+                      </button>
+                    ) : (
+                      <button onClick={() => reopen(i.id)} className="text-xs text-ink/40 hover:text-signal-bad">
+                        Reopen
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))}
-              {incidents.length === 0 && (
+              {visible.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="text-center text-ink/50 py-8">
-                    No incidents logged.
+                  <td colSpan={tab === "resolved" ? 7 : 6} className="text-center text-ink/50 py-8">
+                    {tab === "open" ? "No open incidents." : "No resolved incidents yet."}
                   </td>
                 </tr>
               )}
