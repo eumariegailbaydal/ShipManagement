@@ -9,7 +9,7 @@ const NAV = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/ships", label: "Ships" },
   { href: "/crew", label: "Crew" },
-  { href: "/certifications", label: "Certifications" },
+  { href: "/certifications", label: "Crew Certifications" },
   { href: "/ship-certifications", label: "Ship Certs & Inspections" },
   { href: "/maintenance", label: "Maintenance" },
   { href: "/work-orders", label: "Work Orders" },
